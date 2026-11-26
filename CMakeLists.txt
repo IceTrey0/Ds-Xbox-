@@ -19,8 +19,9 @@ if(MXB_WITH_MELONDS)
   set(ENABLE_JIT OFF CACHE BOOL "" FORCE)
   set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
 
-  add_compile_definitions(_USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS
-                          strncasecmp=_strnicmp strcasecmp=_stricmp)
+    add_compile_definitions($<$<COMPILE_LANGUAGE:C>:LITTLE_ENDIAN=1234>
+                          $<$<COMPILE_LANGUAGE:C>:BIG_ENDIAN=4321>
+                          $<$<COMPILE_LANGUAGE:C>:BYTE_ORDER=1234>)
   include_directories(${CMAKE_SOURCE_DIR}/shim)
 
   add_subdirectory(extern/melonDS EXCLUDE_FROM_ALL)
