@@ -13,15 +13,19 @@ target_link_libraries(test_savecompat mxb_core)
 add_test(NAME savecompat COMMAND test_savecompat)
 
 if(MXB_WITH_MELONDS)
-set(BUILD_QT_SDL OFF CACHE BOOL "" FORCE)
-set(ENABLE_OGLRENDERER OFF CACHE BOOL "" FORCE)
-set(ENABLE_GDBSTUB OFF CACHE BOOL "" FORCE)
-set(ENABLE_JIT OFF CACHE BOOL "" FORCE)
-set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
-add_compile_definitions(_USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS strncasecmp=_strnicmp strcasecmp=_stricmp)
-  target_include_directories(core PRIVATE ${CMAKE_SOURCE_DIR}/shim)  # VERIFY target "core"
+  set(BUILD_QT_SDL OFF CACHE BOOL "" FORCE)
+  set(ENABLE_OGLRENDERER OFF CACHE BOOL "" FORCE)
+  set(ENABLE_GDBSTUB OFF CACHE BOOL "" FORCE)
+  set(ENABLE_JIT OFF CACHE BOOL "" FORCE)
+  set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
+
+  add_compile_definitions(_USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS
+                          strncasecmp=_strnicmp strcasecmp=_stricmp)
+  include_directories(${CMAKE_SOURCE_DIR}/shim)
+
   add_subdirectory(extern/melonDS EXCLUDE_FROM_ALL)
+
   add_library(mxb_melon STATIC src/glue/MelonGlue.cpp)
   target_include_directories(mxb_melon PUBLIC extern/melonDS/src)
-  target_link_libraries(mxb_melon PUBLIC mxb_core core)  # VERIFY target "core"
+  target_link_libraries(mxb_melon PUBLIC mxb_core core)
 endif()
