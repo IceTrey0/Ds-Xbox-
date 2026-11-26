@@ -1,11 +1,24 @@
 name: build
 on: [push, pull_request, workflow_dispatch]
+
+env:
+  MELONDS_TAG: "1.0"   # change this one line to pin a different melonDS
+
 jobs:
   core:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        with: { submodules: recursive }
       - run: cmake -S . -B build -A x64
       - run: cmake --build build --config Release
       - run: ctest --test-dir build -C Release --output-on-failure
+
+  melonds-glue:
+    runs-on: windows-latest
+    continue-on-error: true   # experimental until the glue compiles
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone melonDS
+        run: git clone --depth 1 --branch $env:MELONDS_TAG https://github.com/melonDS-emu/melonDS extern/melonDS
+      - run: cmake -S . -B build-melon -A x64 -DMXB_WITH_MELONDS=ON
+      - run: cmake --build build-melon --config Release --target mxb_melon
