@@ -19,6 +19,7 @@ set(ENABLE_GDBSTUB OFF CACHE BOOL "" FORCE)
 set(ENABLE_JIT OFF CACHE BOOL "" FORCE)
 set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
 add_compile_definitions(_USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS strncasecmp=_strnicmp strcasecmp=_stricmp)
+  target_include_directories(core PRIVATE ${CMAKE_SOURCE_DIR}/shim)  # VERIFY target "core"
   add_subdirectory(extern/melonDS EXCLUDE_FROM_ALL)
   add_library(mxb_melon STATIC src/glue/MelonGlue.cpp)
   target_include_directories(mxb_melon PUBLIC extern/melonDS/src)
