@@ -13,7 +13,11 @@ target_link_libraries(test_savecompat mxb_core)
 add_test(NAME savecompat COMMAND test_savecompat)
 
 if(MXB_WITH_MELONDS)
-  set(BUILD_QT_SDL OFF CACHE BOOL "" FORCE)   # VERIFY option name
+set(BUILD_QT_SDL OFF CACHE BOOL "" FORCE)
+set(ENABLE_OGLRENDERER OFF CACHE BOOL "" FORCE)
+set(ENABLE_GDBSTUB OFF CACHE BOOL "" FORCE)
+set(ENABLE_JIT OFF CACHE BOOL "" FORCE)
+set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
   add_subdirectory(extern/melonDS EXCLUDE_FROM_ALL)
   add_library(mxb_melon STATIC src/glue/MelonGlue.cpp)
   target_include_directories(mxb_melon PUBLIC extern/melonDS/src)
