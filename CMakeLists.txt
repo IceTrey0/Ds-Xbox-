@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(melonxbox CXX)
+project(melonxbox C CXX)
 set(CMAKE_CXX_STANDARD 17)
 
 option(MXB_WITH_MELONDS "Build melonDS glue (needs extern/melonDS)" OFF)
