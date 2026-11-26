@@ -1,0 +1,11 @@
+name: build
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  core:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - run: cmake -S . -B build -A x64
+      - run: cmake --build build --config Release
+      - run: ctest --test-dir build -C Release --output-on-failure
