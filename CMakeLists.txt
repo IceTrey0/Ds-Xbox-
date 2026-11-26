@@ -19,9 +19,11 @@ if(MXB_WITH_MELONDS)
   set(ENABLE_JIT OFF CACHE BOOL "" FORCE)
   set(ENABLE_LTO OFF CACHE BOOL "" FORCE)
 
-    add_compile_definitions($<$<COMPILE_LANGUAGE:C>:LITTLE_ENDIAN=1234>
-                          $<$<COMPILE_LANGUAGE:C>:BIG_ENDIAN=4321>
-                          $<$<COMPILE_LANGUAGE:C>:BYTE_ORDER=1234>)
+  # Set as global flags BEFORE add_subdirectory so melonDS inherits them.
+  set(MXB_DEFS "/D_USE_MATH_DEFINES /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Dstrncasecmp=_strnicmp /Dstrcasecmp=_stricmp")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MXB_DEFS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MXB_DEFS} /DLITTLE_ENDIAN=1234 /DBIG_ENDIAN=4321 /DBYTE_ORDER=1234")
+
   include_directories(${CMAKE_SOURCE_DIR}/shim)
 
   add_subdirectory(extern/melonDS EXCLUDE_FROM_ALL)
