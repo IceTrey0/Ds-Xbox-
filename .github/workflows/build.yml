@@ -28,3 +28,45 @@ jobs:
           $hdr + (Get-Content $f -Raw) | Set-Content $f -NoNewline
       - run: cmake -S . -B build-melon -A x64 -T ClangCL -DMXB_WITH_MELONDS=ON
       - run: cmake --build build-melon --config Release --target mxb_melon
+
+  uwp-app:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Generate placeholder tile images
+        shell: powershell
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          New-Item -ItemType Directory -Force -Path app/Assets | Out-Null
+          $sizes = @{
+            "StoreLogo.png"=@(50,50); "Square44x44Logo.png"=@(44,44);
+            "Square150x150Logo.png"=@(150,150); "Wide310x150Logo.png"=@(310,150);
+            "SplashScreen.png"=@(620,300) }
+          foreach ($k in $sizes.Keys) {
+            $w=$sizes[$k][0]; $h=$sizes[$k][1]
+            $bmp = New-Object System.Drawing.Bitmap $w,$h
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.Clear([System.Drawing.Color]::FromArgb(27,58,51))
+            $d = [Math]::Min($w,$h) * 0.5
+            $g.FillEllipse([System.Drawing.Brushes]::LimeGreen, ($w-$d)/2, ($h-$d)/2, $d, $d)
+            $bmp.Save("app/Assets/$k", [System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bmp.Dispose()
+          }
+
+      - name: Make signing certificate
+        shell: powershell
+        run: |
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=MelonXbox" -KeyUsage DigitalSignature -FriendlyName "MelonXbox" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+          $pw = ConvertTo-SecureString -String "melonxbox" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath app/MelonXbox_Key.pfx -Password $pw | Out-Null
+
+      - name: Build and package
+        run: msbuild app/MelonXbox.vcxproj /restore /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile=MelonXbox_Key.pfx /p:PackageCertificatePassword=melonxbox
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MelonXbox-package
+          path: app/AppPackages/**
