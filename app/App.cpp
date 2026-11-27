@@ -108,7 +108,7 @@ private:
         sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
         sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         check_hresult(factory->CreateSwapChainForCoreWindow(
-            dev.Get(), get_unknown(window_), &sd, nullptr, &swap_));
+            dev.Get(), winrt::get_unknown(window_), &sd, nullptr, &swap_));
 
         ComPtr<ID3D11Texture2D> bb;
         check_hresult(swap_->GetBuffer(0, IID_PPV_ARGS(&bb)));
