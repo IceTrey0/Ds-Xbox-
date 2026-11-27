@@ -11,8 +11,12 @@
 #include <d3d11_2.h>
 #include <dxgi1_3.h>
 #include <wrl/client.h>
+#include <winrt/Windows.Storage.h>
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
+#include <fstream>
+#include <string>
 
 #include "TouchCursor.h"
 
@@ -22,6 +26,19 @@ using namespace winrt::Windows::UI::Core;
 using namespace winrt::Windows::Gaming::Input;
 using namespace winrt::Windows::Graphics::Display;
 using Microsoft::WRL::ComPtr;
+
+// Appends to LocalState\mxb.log (fetch it via the Xbox Device Portal).
+static void Log(const std::string& msg)
+{
+    OutputDebugStringA((msg + "\n").c_str());
+    try {
+        std::wstring path = std::wstring(
+            winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path().c_str())
+            + L"\\mxb.log";
+        std::ofstream f(path, std::ios::app);
+        f << msg << "\n";
+    } catch (...) {}
+}
 
 struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
@@ -34,33 +51,67 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     void Run()
     {
-        window_.Activate();
-        InitD3D();
-
-        auto last = std::chrono::steady_clock::now();
-        while (true)
+        try
         {
-            window_.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+            Log("--- start ---");
+            window_.Activate();
+            InitD3D();
+            Log("d3d ready " + std::to_string(w_) + "x" + std::to_string(h_));
 
-            auto now = std::chrono::steady_clock::now();
-            float dt = std::chrono::duration<float>(now - last).count();
-            last = now;
-
-            float sx = 0, sy = 0;
-            bool tap = false, slow = false;
-            auto pads = Gamepad::Gamepads();
-            if (pads.Size() > 0)
+            auto last = std::chrono::steady_clock::now();
+            int frame = 0;
+            while (true)
             {
-                auto r = pads.GetAt(0).GetCurrentReading();
-                sx = float(r.RightThumbstickX);
-                sy = float(r.RightThumbstickY);
-                tap = r.RightTrigger > 0.5;
-                slow = r.LeftTrigger > 0.5;
-            }
-            cursor_.Update(sx, sy, dt, slow);
+                if (!window_.Visible())
+                {
+                    window_.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+                    last = std::chrono::steady_clock::now();
+                    continue;
+                }
+                window_.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
 
-            Render(tap);
-            swap_->Present(1, 0);
+                auto now = std::chrono::steady_clock::now();
+                float dt = std::chrono::duration<float>(now - last).count();
+                last = now;
+
+                float sx = 0, sy = 0;
+                bool tap = false, slow = false;
+                auto pads = Gamepad::Gamepads();
+                if (pads.Size() > 0)
+                {
+                    auto r = pads.GetAt(0).GetCurrentReading();
+                    sx = float(r.RightThumbstickX);
+                    sy = float(r.RightThumbstickY);
+                    tap = r.RightTrigger > 0.5;
+                    slow = r.LeftTrigger > 0.5;
+                }
+                cursor_.Update(sx, sy, dt, slow);
+
+                Render(tap);
+                HRESULT hr = swap_->Present(1, 0);
+                if (FAILED(hr))
+                {
+                    char b[64];
+                    std::snprintf(b, sizeof b, "Present failed 0x%08X", unsigned(hr));
+                    Log(b);
+                    return;
+                }
+                if (++frame == 1) Log("first frame presented");
+            }
+        }
+        catch (winrt::hresult_error const& e)
+        {
+            char b[64];
+            std::snprintf(b, sizeof b, "hresult_error 0x%08X: ", unsigned(int32_t(e.code())));
+            Log(std::string(b) + winrt::to_string(e.message()));
+        }
+        catch (std::exception const& e)
+        {
+            Log(std::string("std::exception: ") + e.what());
+        }
+        catch (...)
+        {
+            Log("unknown exception");
         }
     }
 
@@ -76,9 +127,12 @@ private:
     void InitD3D()
     {
         auto b = window_.Bounds();
-        float scale = float(int(DisplayInformation::GetForCurrentView().ResolutionScale())) / 100.0f;
-        w_ = int(b.Width * scale);
-        h_ = int(b.Height * scale);
+        int rs = int(DisplayInformation::GetForCurrentView().ResolutionScale());
+        float scale = rs > 0 ? float(rs) / 100.0f : 1.0f;   // Invalid(0) on some devices
+        w_ = std::max(1, int(b.Width * scale));
+        h_ = std::max(1, int(b.Height * scale));
+        Log("bounds " + std::to_string(b.Width) + "x" + std::to_string(b.Height) +
+            " scale " + std::to_string(rs));
 
         D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
                                        D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0 };
